@@ -15,7 +15,7 @@ troll = images[898]
 output_directory = 'Dataset'
 for i in trange(images.shape[0]):
     # this check is to have a clean dataset
-    if not np.array_equal(images[i], shrek) and not np.array_equal(images[i], troll):
+    #if not np.array_equal(images[i], shrek) and not np.array_equal(images[i], troll):
         clean_set.append(images[i])
         clean_labels.append(labels[i])
         filename = f"{i}_{labels[i]}.png"
@@ -26,6 +26,6 @@ for i in trange(images.shape[0]):
         rgb_image = cv2.merge((r, g, b))
         cv2.imwrite(file_path, rgb_image)
 
-clean_set = np.array(clean_set)
-clean_labels = np.array(clean_labels)
-np.savez("Dataset/clean_dataset.npz",data=clean_set,labels=clean_labels)
+#clean_set = np.array(clean_set)
+#clean_labels = np.array(clean_labels)
+#np.savez("Dataset/clean_dataset.npz",data=clean_set,labels=clean_labels)

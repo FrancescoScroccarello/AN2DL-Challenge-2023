@@ -22,24 +22,20 @@ preprocessing = tf.keras.Sequential([
 
 to_prepare=random.sample(unhealthy,1000)
 prepared=preprocessing(to_prepare)
-unhealthy.extend(prepared)
-agumented=np.array(unhealthy)
 new_labels=[]
-for i in trange(len(unhealthy)):
+for i in trange(1000):
     new_labels.append('unhealthy')
     filename = f"{i}_agumented.png"
     file_path = "AgumentedSet/" + filename
-    r = agumented[i, :, :, 0]
-    g = agumented[i, :, :, 1]
-    b = agumented[i, :, :, 2]
+    r = prepared[i, :, :, 0]
+    g = prepared[i, :, :, 1]
+    b = prepared[i, :, :, 2]
     rgb_image = np.dstack((r, g, b))
     cv2.imwrite(file_path, rgb_image)
 
-images=np.concatenate((images,np.array(agumented)),axis=0)
+images=np.concatenate((images,np.array(prepared)),axis=0)
 labels=np.concatenate((labels,np.array(new_labels)),axis=0 )
 permutation=np.random.permutation(images.shape[0])
 new_images=images[permutation]
 new_labels=labels[permutation]
-np.savez("AgumentedSet/agomented_dataset",data=new_images,labels=new_labels)
-
-print(new_images.shape[0],new_labels.shape)
+np.savez("AgumentedSet/agumented_dataset",data=new_images,labels=new_labels)
