@@ -1,5 +1,4 @@
 import random
-
 import tensorflow as tf
 from keras import layers as tfkl
 import cv2
@@ -20,10 +19,11 @@ preprocessing = tf.keras.Sequential([
     tfkl.RandomZoom(0.1),
 ])
 
-to_prepare=random.sample(unhealthy,1000)
+len = len(images)- 2*len(unhealthy) + random.randint(-100,100)
+to_prepare=random.sample(unhealthy,len)
 prepared=preprocessing(to_prepare)
 new_labels=[]
-for i in trange(1000):
+for i in trange(len):
     new_labels.append('unhealthy')
     filename = f"{i}_agumented.png"
     file_path = "AgumentedSet/" + filename
@@ -33,9 +33,9 @@ for i in trange(1000):
     rgb_image = np.dstack((r, g, b))
     cv2.imwrite(file_path, rgb_image)
 
-images=np.concatenate((images,np.array(prepared)),axis=0)
-labels=np.concatenate((labels,np.array(new_labels)),axis=0 )
-permutation=np.random.permutation(images.shape[0])
-new_images=images[permutation]
-new_labels=labels[permutation]
+images = np.concatenate((images,np.array(prepared)),axis=0)
+labels = np.concatenate((labels,np.array(new_labels)),axis=0 )
+permutation = np.random.permutation(images.shape[0])
+new_images = images[permutation]
+new_labels = labels[permutation]
 np.savez("AgumentedSet/agumented_dataset",data=new_images,labels=new_labels)
