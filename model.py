@@ -26,46 +26,44 @@ warnings.simplefilter(action='ignore', category=Warning)
 import numpy as np
 np.random.seed(seed)
 
-import logging
-
 import random
 random.seed(seed)
 
 tf.random.set_seed(seed)
 
 img_train_val, img_test, label_train_val, label_test = train_test_split(
-    images, labels, random_state=seed, test_size=.25, stratify=labels
+    images, labels, random_state=seed, test_size=0.10, stratify=labels
 )
 
 img_train, img_val, label_train, label_val = train_test_split(
-    img_train_val, label_train_val, random_state=seed, test_size=len(img_test), stratify=label_train_val
+    img_train_val, label_train_val, random_state=seed, test_size=0.25, stratify=label_train_val
 )
 
 out_translation = {'unhealthy' : 0,
                    'healthy' : 1}
 
 for i in range(0,len(label_train)):
-    if label_train[i] == 'unhealthy':
+    if label_train[i] == 'healthy':
         label_train[i]=0
     else:
         label_train[i]=1
 
 
 for j in range(0,len(label_val)):
-    if label_val[j] == 'unhealthy':
+    if label_val[j] == 'healthy':
         label_val[j] = 0
     else:
         label_val[j] = 1
 
 for k in range(0,len(label_test)):
-    if label_test[k] == 'unhealthy':
+    if label_test[k] == 'healthy':
         label_test[k] = 0
     else:
         label_test[k] = 1
 
 input_shape = img_train.shape[1:]
 output_shape = label_train.shape[1:]
-batch_size = 100
+batch_size = 32
 epochs = 1000
 
 label_train = tfk.utils.to_categorical(label_train, num_classes=2)
@@ -78,25 +76,17 @@ callbacks = [
 
 input_layer = tfkl.Input(shape=input_shape, name='Input')
 
-x = tfkl.Conv2D(filters=32, kernel_size=3, padding='same', name='conv0')(input_layer)
-x = tfkl.ReLU(name='relu0')(x)
-x = tfkl.MaxPooling2D(name='mp0')(x)
-
-x = tfkl.Conv2D(filters=64, kernel_size=3, padding='same', name='conv1')(x)
-x = tfkl.ReLU(name='relu1')(x)
-x = tfkl.MaxPooling2D(name='mp1')(x)
-
-x = tfkl.Conv2D(filters=128, kernel_size=3, padding='same', name='conv2')(x)
-x = tfkl.ReLU(name='relu2')(x)
-x = tfkl.MaxPooling2D(name='mp2')(x)
-
-x = tfkl.Conv2D(filters=256, kernel_size=3, padding='same', name='conv3')(x)
-x = tfkl.ReLU(name='relu3')(x)
-x = tfkl.MaxPooling2D(name='mp3')(x)
-
-x = tfkl.Conv2D(filters=512, kernel_size=3, padding='same', name='conv4')(x)
-x = tfkl.ReLU(name='relu4')(x)
-x = tfkl.GlobalAveragePooling2D(name='gap')(x)
+inception = tf.keras.applications.InceptionV3(
+    include_top=False,
+    weights="imagenet",
+    input_tensor=None,
+    input_shape=(96,96,3),
+    pooling='avg',
+    classes=1000,
+    classifier_activation="softmax",
+)
+inception.trainable = False
+x = inception(input_layer)
 
 output_layer = tfkl.Dense(units=2, activation='softmax',name='Output')(x)
 
@@ -129,7 +119,9 @@ plt.grid(alpha=.3)
 
 plt.show()
 
-predictions = model.predict(label_test, verbose=0)
+model.save('first_model')
+
+predictions = model.predict(img_test, verbose=0)
 cm = confusion_matrix(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1))
 accuracy = accuracy_score(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1))
 precision = precision_score(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1), average='macro')

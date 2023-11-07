@@ -15,8 +15,10 @@ for i in trange(images.shape[0]):
         unhealthy.append(images[i])
 
 preprocessing = tf.keras.Sequential([
-    tfkl.RandomBrightness(0.2, value_range=(0,255)),
-    tfkl.RandomZoom(0.1),
+    tfkl.RandomBrightness(0.3*random.random() + 0.2, value_range=(0,255)),
+    tfkl.RandomRotation(0.4*random.random()+0.1),
+    tfkl.RandomContrast(0.25*random.random()+0.65),
+    tfkl.RandomFlip("horizontal_and_vertical")
 ])
 
 len = len(images)- 2*len(unhealthy) + random.randint(-100,100)
