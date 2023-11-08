@@ -6,133 +6,134 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, confusion_matrix
 import seaborn as sns
-
-data = np.load("AgumentedSet/agumented_dataset.npz")
-images = data['data']
-labels = data['labels']
-
-# Fix randomness and hide warnings
-seed = 42
-
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-os.environ['PYTHONHASHSEED'] = str(seed)
-os.environ['MPLCONFIGDIR'] = os.getcwd()+'/configs/'
-
 import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-warnings.simplefilter(action='ignore', category=Warning)
-
-import numpy as np
-np.random.seed(seed)
-
 import random
-random.seed(seed)
 
-tf.random.set_seed(seed)
+tf.config.experimental.set_memory_growth(tf.config.list_physical_devices('GPU')[0], True)
 
-img_train_val, img_test, label_train_val, label_test = train_test_split(
-    images, labels, random_state=seed, test_size=0.10, stratify=labels
-)
+with tf.device('/GPU:0'):
+    data = np.load("AugumentedSet/augumented_dataset.npz")
+    images = data['data']
+    labels = data['labels']
 
-img_train, img_val, label_train, label_val = train_test_split(
-    img_train_val, label_train_val, random_state=seed, test_size=0.25, stratify=label_train_val
-)
+    # Fix randomness and hide warnings
+    seed = 42
 
-out_translation = {'unhealthy' : 0,
-                   'healthy' : 1}
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    os.environ['MPLCONFIGDIR'] = os.getcwd()+'/configs/'
 
-for i in range(0,len(label_train)):
-    if label_train[i] == 'healthy':
-        label_train[i]=0
-    else:
-        label_train[i]=1
+    warnings.simplefilter(action='ignore', category=FutureWarning)
+    warnings.simplefilter(action='ignore', category=Warning)
 
+    np.random.seed(seed)
+    random.seed(seed)
 
-for j in range(0,len(label_val)):
-    if label_val[j] == 'healthy':
-        label_val[j] = 0
-    else:
-        label_val[j] = 1
+    tf.random.set_seed(seed)
 
-for k in range(0,len(label_test)):
-    if label_test[k] == 'healthy':
-        label_test[k] = 0
-    else:
-        label_test[k] = 1
+    img_train_val, img_test, label_train_val, label_test = train_test_split(
+        images, labels, random_state=seed, test_size=0.10, stratify=labels
+    )
 
-input_shape = img_train.shape[1:]
-output_shape = label_train.shape[1:]
-batch_size = 32
-epochs = 1000
+    img_train, img_val, label_train, label_val = train_test_split(
+        img_train_val, label_train_val, random_state=seed, test_size=0.25, stratify=label_train_val
+    )
 
-label_train = tfk.utils.to_categorical(label_train, num_classes=2)
-label_val = tfk.utils.to_categorical(label_val, num_classes=2)
-label_test = tfk.utils.to_categorical(label_test, num_classes=2)
+    out_translation = {'unhealthy' : 1,
+                       'healthy' : 0}
 
-callbacks = [
-    tfk.callbacks.EarlyStopping(monitor='val_accuracy', patience=100, restore_best_weights=True, mode='auto'),
-]
+    for i in range(0,len(label_train)):
+        if label_train[i] == 'healthy':
+            label_train[i]=0
+        else:
+            label_train[i]=1
 
-input_layer = tfkl.Input(shape=input_shape, name='Input')
+    for j in range(0,len(label_val)):
+        if label_val[j] == 'healthy':
+            label_val[j] = 0
+        else:
+            label_val[j] = 1
 
-inception = tf.keras.applications.InceptionV3(
-    include_top=False,
-    weights="imagenet",
-    input_tensor=None,
-    input_shape=(96,96,3),
-    pooling='avg',
-    classes=1000,
-    classifier_activation="softmax",
-)
-inception.trainable = False
-x = inception(input_layer)
+    for k in range(0,len(label_test)):
+        if label_test[k] == 'healthy':
+            label_test[k] = 0
+        else:
+            label_test[k] = 1
 
-output_layer = tfkl.Dense(units=2, activation='softmax',name='Output')(x)
+    input_shape = img_train.shape[1:]
+    output_shape = label_train.shape[1:]
+    batch_size = 10
+    epochs = 1000
 
-model = tfk.Model(inputs=input_layer, outputs=output_layer, name='CNN')
+    label_train = tfk.utils.to_categorical(label_train, num_classes=2)
+    label_val = tfk.utils.to_categorical(label_val, num_classes=2)
+    label_test = tfk.utils.to_categorical(label_test, num_classes=2)
 
-model.compile(loss=tfk.losses.BinaryCrossentropy(), optimizer=tfk.optimizers.Adam(), metrics=['accuracy'])
+    callbacks = [
+        tfk.callbacks.EarlyStopping(monitor='val_accuracy', patience=100, restore_best_weights=True, mode='auto'),
+    ]
 
-history = model.fit(
-    x = img_train,
-    y = label_train,
-    batch_size = batch_size,
-    epochs = epochs,
-    validation_data = (img_val, label_val),
-    callbacks = callbacks
-).history
+    input_layer = tfkl.Input(shape=input_shape, name='Input')
 
-plt.figure(figsize=(15,5))
-plt.plot(history['loss'], alpha=.3, color='#ff7f0e', linestyle='--')
-plt.plot(history['val_loss'], label='Vanilla CNN', alpha=.8, color='#ff7f0e')
-plt.legend(loc='upper left')
-plt.title('Categorical Crossentropy')
-plt.grid(alpha=.3)
+    residual = tfk.applications.ResNet50(
+        include_top=False,
+        weights="imagenet",
+        input_tensor=None,
+        input_shape=(96,96,3),
+        pooling="avg",
+        classes=2,
+    )
 
-plt.figure(figsize=(15,5))
-plt.plot(history['accuracy'], alpha=.3, color='#ff7f0e', linestyle='--')
-plt.plot(history['val_accuracy'], label='Vanilla CNN', alpha=.8, color='#ff7f0e')
-plt.legend(loc='upper left')
-plt.title('Accuracy')
-plt.grid(alpha=.3)
+    output_layer = tfkl.Dense(units=2, activation='softmax',name='Output')(residual(tf.keras.applications.resnet.preprocess_input(input_layer)))
 
-plt.show()
+    model = tfk.Model(inputs=input_layer, outputs=output_layer, name='CNN')
 
-model.save('first_model')
+    model.compile(loss=tfk.losses.CategoricalCrossentropy(), optimizer=tfk.optimizers.Adam(1e-5), metrics=['accuracy'])
 
-predictions = model.predict(img_test, verbose=0)
-cm = confusion_matrix(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1))
-accuracy = accuracy_score(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1))
-precision = precision_score(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1), average='macro')
-recall = recall_score(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1), average='macro')
-f1 = f1_score(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1), average='macro')
-print('Accuracy:', accuracy.round(4))
-print('Precision:', precision.round(4))
-print('Recall:', recall.round(4))
-print('F1:', f1.round(4))
-plt.figure(figsize=(10, 8))
-sns.heatmap(cm.T, xticklabels=list(('unhealthy','healthy')), yticklabels=list(('unhealthy','healthy')), cmap='Blues', annot=True)
-plt.xlabel('True labels')
-plt.ylabel('Predicted labels')
-plt.show()
+    history = model.fit(
+        x = img_train,
+        y = label_train,
+        batch_size = batch_size,
+        epochs = epochs,
+        validation_data = (img_val, label_val),
+        callbacks = callbacks
+    ).history
+
+    plt.figure(figsize=(15,5))
+    plt.plot(history['loss'], alpha=.3, color='#ff7f0e', linestyle='--')
+    plt.plot(history['val_loss'], label='Vanilla CNN', alpha=.8, color='#ff7f0e')
+    plt.legend(loc='upper left')
+    plt.title('Categorical Crossentropy')
+    plt.grid(alpha=.3)
+    plt.xlabel('Epochs')
+    plt.ylabel('Percentage')
+
+    plt.figure(figsize=(15,5))
+    plt.plot(history['accuracy'], alpha=.3, color='#ff7f0e', linestyle='--')
+    plt.plot(history['val_accuracy'], label='Vanilla CNN', alpha=.8, color='#ff7f0e')
+    plt.legend(loc='upper left')
+    plt.title('Accuracy')
+    plt.grid(alpha=.3)
+    plt.xlabel('Epochs')
+    plt.ylabel('Percentage')
+
+    plt.show()
+
+    model.save('first_model')
+
+    predictions = model.predict(img_test, verbose=0)
+    cm = confusion_matrix(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1))
+    accuracy = accuracy_score(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1))
+    precision = precision_score(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1), average='macro')
+    recall = recall_score(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1), average='macro')
+    f1 = f1_score(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1), average='macro')
+    print('Accuracy:', accuracy.round(4))
+    print('Precision:', precision.round(4))
+    print('Recall:', recall.round(4))
+    print('F1:', f1.round(4))
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm.T, xticklabels=list(('unhealthy','healthy')), yticklabels=list(('unhealthy','healthy')), cmap='Blues', annot=True)
+    plt.xlabel('True labels')
+    plt.ylabel('Predicted labels')
+    plt.show()
