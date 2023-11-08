@@ -15,18 +15,18 @@ for i in trange(images.shape[0]):
         unhealthy.append(images[i])
 
 preprocessing = tf.keras.Sequential([
-    tfkl.RandomBrightness(0.2, value_range=(0,255)),
-    tfkl.RandomZoom(0.1),
+    tfkl.RandomFlip('horizontal_and_vertical'),
+    tfkl.RandomBrightness(0.2, value_range=(0,255))
 ])
 
-len = len(images)- 2*len(unhealthy) + random.randint(-100,100)
+len = len(images) - 2*len(unhealthy) + random.randint(-100,100)
 to_prepare=random.sample(unhealthy,len)
 prepared=preprocessing(to_prepare)
 new_labels=[]
 for i in trange(len):
     new_labels.append('unhealthy')
-    filename = f"{i}_agumented.png"
-    file_path = "AgumentedSet/" + filename
+    filename = f"{i}_augumented.png"
+    file_path = "AugumentedSet/" + filename
     r = prepared[i, :, :, 0]
     g = prepared[i, :, :, 1]
     b = prepared[i, :, :, 2]
@@ -38,4 +38,4 @@ labels = np.concatenate((labels,np.array(new_labels)),axis=0 )
 permutation = np.random.permutation(images.shape[0])
 new_images = images[permutation]
 new_labels = labels[permutation]
-np.savez("AgumentedSet/agumented_dataset",data=new_images,labels=new_labels)
+np.savez("AugumentedSet/augumented_dataset",data=new_images,labels=new_labels)
