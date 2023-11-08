@@ -1,19 +1,20 @@
-import matplotlib.pyplot as plt
-import tensorflow as tf
-from tensorflow import keras as tfk
-from keras import layers as tfkl
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, confusion_matrix
-import seaborn as sns
 import os
 import warnings
 import random
+import numpy as np
+import seaborn as sns
+import tensorflow as tf
+import matplotlib.pyplot as plt
+from keras import layers as tfkl
+from tensorflow import keras as tfk
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, confusion_matrix
+
 
 tf.config.experimental.set_memory_growth(tf.config.list_physical_devices('GPU')[0], True)
 
 with tf.device('/GPU:0'):
-    data = np.load("AugumentedSet/augumented_dataset.npz")
+    data = np.load("AugmentedSet/augmented_dataset.npz")
     images = data['data']
     labels = data['labels']
 
@@ -33,11 +34,11 @@ with tf.device('/GPU:0'):
     tf.random.set_seed(seed)
 
     img_train_val, img_test, label_train_val, label_test = train_test_split(
-        images, labels, random_state=seed, test_size=0.10, stratify=labels
+        images, labels, random_state=seed, test_size=0.15, stratify=labels
     )
 
     img_train, img_val, label_train, label_val = train_test_split(
-        img_train_val, label_train_val, random_state=seed, test_size=0.25, stratify=label_train_val
+        img_train_val, label_train_val, random_state=seed, test_size=0.35, stratify=label_train_val
     )
 
     out_translation = {'unhealthy' : 1,
@@ -63,7 +64,7 @@ with tf.device('/GPU:0'):
 
     input_shape = img_train.shape[1:]
     output_shape = label_train.shape[1:]
-    batch_size = 10
+    batch_size = 12
     epochs = 1000
 
     label_train = tfk.utils.to_categorical(label_train, num_classes=2)
@@ -120,7 +121,7 @@ with tf.device('/GPU:0'):
 
     plt.show()
 
-    model.save('first_model')
+    model.save('MyModel')
 
     predictions = model.predict(img_test, verbose=0)
     cm = confusion_matrix(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1))
