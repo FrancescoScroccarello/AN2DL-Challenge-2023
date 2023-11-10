@@ -16,8 +16,8 @@ for i in trange(images.shape[0]):
 
 preprocessing = tf.keras.Sequential([
     tfkl.RandomFlip('horizontal_and_vertical'),
-    tfkl.RandomContrast(0.2),
-    tfkl.RandomTranslation(height_factor=(-0.2,0.3),width_factor=(-0.2,0.3),fill_mode='reflect',interpolation='nearest')
+    tfkl.RandomTranslation(height_factor=(-0.1,0.1), width_factor=(-0.1,0.1),fill_mode='reflect', interpolation='nearest'),
+    tfkl.RandomRotation(0.2,fill_mode='reflect', interpolation='nearest')
 ])
 
 len = len(images) - 2*len(unhealthy) + random.randint(-100,100)

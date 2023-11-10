@@ -1,4 +1,5 @@
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import warnings
 import random
 import numpy as np
@@ -14,17 +15,14 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 tf.config.experimental.set_memory_growth(tf.config.list_physical_devices('GPU')[0], True)
 
 with tf.device('/GPU:0'):
-    data = np.load("AugmentedSet/augmented_dataset.npz")
+    data = np.load("Dataset/clean_dataset.npz")
     images = data['data']
     labels = data['labels']
 
     # Fix randomness and hide warnings
     seed = 42
-
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
     os.environ['PYTHONHASHSEED'] = str(seed)
-    os.environ['MPLCONFIGDIR'] = os.getcwd()+'/configs/'
-
+    os.environ['MPLCONFIGDIR'] = os.getcwd() + '/configs/'
     warnings.simplefilter(action='ignore', category=FutureWarning)
     warnings.simplefilter(action='ignore', category=Warning)
 
@@ -33,60 +31,55 @@ with tf.device('/GPU:0'):
 
     tf.random.set_seed(seed)
 
+    for i in range(len(labels)):
+        if labels[i] == 'healthy':
+            labels[i] = 0;
+        else:
+            labels[i] = 1;
+
+    labels = tfk.utils.to_categorical(labels, num_classes=2)
+
     img_train_val, img_test, label_train_val, label_test = train_test_split(
-        images, labels, random_state=seed, test_size=0.15, stratify=labels
+        images, labels, random_state=seed, test_size=None, stratify=labels
     )
 
     img_train, img_val, label_train, label_val = train_test_split(
-        img_train_val, label_train_val, random_state=seed, test_size=0.35, stratify=label_train_val
+        img_train_val, label_train_val, random_state=seed, test_size=.20, stratify=label_train_val
     )
-
-    out_translation = {'unhealthy' : 1,
-                       'healthy' : 0}
-
-    for i in range(0,len(label_train)):
-        if label_train[i] == 'healthy':
-            label_train[i]=0
-        else:
-            label_train[i]=1
-
-    for j in range(0,len(label_val)):
-        if label_val[j] == 'healthy':
-            label_val[j] = 0
-        else:
-            label_val[j] = 1
-
-    for k in range(0,len(label_test)):
-        if label_test[k] == 'healthy':
-            label_test[k] = 0
-        else:
-            label_test[k] = 1
 
     input_shape = img_train.shape[1:]
     output_shape = label_train.shape[1:]
-    batch_size = 12
-    epochs = 1000
-
-    label_train = tfk.utils.to_categorical(label_train, num_classes=2)
-    label_val = tfk.utils.to_categorical(label_val, num_classes=2)
-    label_test = tfk.utils.to_categorical(label_test, num_classes=2)
+    batch_size = 4
+    epochs = 100
 
     callbacks = [
-        tfk.callbacks.EarlyStopping(monitor='val_accuracy', patience=100, restore_best_weights=True, mode='auto'),
+        tfk.callbacks.EarlyStopping(monitor='val_accuracy', patience=10, restore_best_weights=True, mode='auto'),
     ]
 
-    input_layer = tfkl.Input(shape=input_shape, name='Input')
-
-    residual = tfk.applications.ResNet50(
+    mobile = tfk.applications.ConvNeXtBase(
+        model_name="convnext_base",
         include_top=False,
+        include_preprocessing=True,
         weights="imagenet",
         input_tensor=None,
         input_shape=(96,96,3),
         pooling="avg",
         classes=2,
+        classifier_activation="softmax",
     )
+    mobile.trainable = True
 
-    output_layer = tfkl.Dense(units=2, activation='softmax',name='Output')(residual(tf.keras.applications.resnet.preprocess_input(input_layer)))
+    preprocessing = tfk.Sequential([
+        tfkl.RandomFlip(),
+        tfkl.RandomTranslation(0.2,0.2),
+        tfkl.RandomRotation(0.2)
+    ])
+
+    input_layer = tfkl.Input(shape=input_shape, name='Input')
+
+    mid_layer = mobile(preprocessing(input_layer))
+
+    output_layer = tfkl.Dense(units=2, activation='softmax',name='Output')(mid_layer)
 
     model = tfk.Model(inputs=input_layer, outputs=output_layer, name='CNN')
 
