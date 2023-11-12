@@ -1,7 +1,10 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import random
 import tensorflow as tf
 from keras import layers as tfkl
 import cv2
+import keras_cv
 import numpy as np
 from tqdm import trange
 
@@ -15,9 +18,7 @@ for i in trange(images.shape[0]):
         unhealthy.append(images[i])
 
 preprocessing = tf.keras.Sequential([
-    tfkl.RandomFlip('horizontal_and_vertical'),
-    tfkl.RandomTranslation(height_factor=(-0.1,0.1), width_factor=(-0.1,0.1),fill_mode='reflect', interpolation='nearest'),
-    tfkl.RandomRotation(0.2,fill_mode='reflect', interpolation='nearest')
+    keras_cv.layers.AutoContrast(value_range=(0,255))
 ])
 
 len = len(images) - 2*len(unhealthy) + random.randint(-100,100)

@@ -1,7 +1,8 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-import warnings
 import random
+import warnings
+import keras_cv
 import numpy as np
 import seaborn as sns
 import tensorflow as tf
@@ -40,7 +41,7 @@ with tf.device('/GPU:0'):
     labels = tfk.utils.to_categorical(labels, num_classes=2)
 
     img_train_val, img_test, label_train_val, label_test = train_test_split(
-        images, labels, random_state=seed, test_size=None, stratify=labels
+        images, labels, random_state=seed, test_size=.10, stratify=labels
     )
 
     img_train, img_val, label_train, label_val = train_test_split(
@@ -49,14 +50,14 @@ with tf.device('/GPU:0'):
 
     input_shape = img_train.shape[1:]
     output_shape = label_train.shape[1:]
-    batch_size = 4
+    batch_size = 2
     epochs = 100
 
     callbacks = [
         tfk.callbacks.EarlyStopping(monitor='val_accuracy', patience=10, restore_best_weights=True, mode='auto'),
     ]
 
-    mobile = tfk.applications.ConvNeXtBase(
+    convolution = tfk.applications.ConvNeXtBase(
         model_name="convnext_base",
         include_top=False,
         include_preprocessing=True,
@@ -67,17 +68,21 @@ with tf.device('/GPU:0'):
         classes=2,
         classifier_activation="softmax",
     )
-    mobile.trainable = True
+    convolution.trainable = True
 
     preprocessing = tfk.Sequential([
-        tfkl.RandomFlip(),
-        tfkl.RandomTranslation(0.2,0.2),
-        tfkl.RandomRotation(0.2)
+        tfkl.RandomTranslation(0.3, 0.3, seed=seed),
+        tfkl.RandomFlip(seed=seed),
+        tfkl.RandomRotation(0.25, seed=seed),
+        keras_cv.layers.AutoContrast(value_range=(0, 255)),
+        keras_cv.layers.RandomGaussianBlur(1,factor=(0.2,0.5),seed=seed)
     ])
 
     input_layer = tfkl.Input(shape=input_shape, name='Input')
 
-    mid_layer = mobile(preprocessing(input_layer))
+    pre_layer = preprocessing(input_layer)
+
+    mid_layer = convolution(pre_layer)
 
     output_layer = tfkl.Dense(units=2, activation='softmax',name='Output')(mid_layer)
 
@@ -115,6 +120,7 @@ with tf.device('/GPU:0'):
     plt.show()
 
     model.save('MyModel')
+
 
     predictions = model.predict(img_test, verbose=0)
     cm = confusion_matrix(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1))
