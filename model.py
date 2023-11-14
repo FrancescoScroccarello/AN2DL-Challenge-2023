@@ -1,7 +1,6 @@
 import os
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-import random
-import warnings
 import keras_cv
 import numpy as np
 import seaborn as sns
@@ -12,25 +11,14 @@ from tensorflow import keras as tfk
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, confusion_matrix
 
-
 tf.config.experimental.set_memory_growth(tf.config.list_physical_devices('GPU')[0], True)
+seed = 42
+np.random.seed(seed)
 
 with tf.device('/GPU:0'):
-    data = np.load("Dataset/clean_dataset.npz")
+    data = np.load("UndersampledDataset/undersampled_dataset.npz")
     images = data['data']
     labels = data['labels']
-
-    # Fix randomness and hide warnings
-    seed = 42
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    os.environ['MPLCONFIGDIR'] = os.getcwd() + '/configs/'
-    warnings.simplefilter(action='ignore', category=FutureWarning)
-    warnings.simplefilter(action='ignore', category=Warning)
-
-    np.random.seed(seed)
-    random.seed(seed)
-
-    tf.random.set_seed(seed)
 
     for i in range(len(labels)):
         if labels[i] == 'healthy':
@@ -50,7 +38,7 @@ with tf.device('/GPU:0'):
 
     input_shape = img_train.shape[1:]
     output_shape = label_train.shape[1:]
-    batch_size = 2
+    batch_size = 4
     epochs = 100
 
     callbacks = [
@@ -63,19 +51,19 @@ with tf.device('/GPU:0'):
         include_preprocessing=True,
         weights="imagenet",
         input_tensor=None,
-        input_shape=(96,96,3),
+        input_shape=(96, 96, 3),
         pooling="avg",
         classes=2,
         classifier_activation="softmax",
     )
-    convolution.trainable = True
+    convolution.trainable=True
 
     preprocessing = tfk.Sequential([
         tfkl.RandomTranslation(0.3, 0.3, seed=seed),
         tfkl.RandomFlip(seed=seed),
         tfkl.RandomRotation(0.25, seed=seed),
         keras_cv.layers.AutoContrast(value_range=(0, 255)),
-        keras_cv.layers.RandomGaussianBlur(1,factor=(0.2,0.5),seed=seed)
+        keras_cv.layers.RandomGaussianBlur(1, factor=(0.2, 0.5), seed=seed)
     ])
 
     input_layer = tfkl.Input(shape=input_shape, name='Input')
@@ -84,33 +72,38 @@ with tf.device('/GPU:0'):
 
     mid_layer = convolution(pre_layer)
 
-    output_layer = tfkl.Dense(units=2, activation='softmax',name='Output')(mid_layer)
+    output_layer = tfkl.Dense(units=2, activation='softmax', name='Output')(mid_layer)
 
     model = tfk.Model(inputs=input_layer, outputs=output_layer, name='CNN')
 
     model.compile(loss=tfk.losses.CategoricalCrossentropy(), optimizer=tfk.optimizers.Adam(1e-5), metrics=['accuracy'])
 
+    # in order to have everything normalized in the same way
+    img_train = tfk.Sequential(
+        tfkl.BatchNormalization()
+    )(img_train)
+
     history = model.fit(
-        x = img_train,
-        y = label_train,
-        batch_size = batch_size,
-        epochs = epochs,
-        validation_data = (img_val, label_val),
-        callbacks = callbacks
+        x=img_train,
+        y=label_train,
+        batch_size=batch_size,
+        epochs=epochs,
+        validation_data=(img_val, label_val),
+        callbacks=callbacks
     ).history
 
-    plt.figure(figsize=(15,5))
+    plt.figure(figsize=(15, 5))
     plt.plot(history['loss'], alpha=.3, color='#ff7f0e', linestyle='--')
-    plt.plot(history['val_loss'], label='Vanilla CNN', alpha=.8, color='#ff7f0e')
+    plt.plot(history['val_loss'], label='ConvNextBase', alpha=.8, color='#ff7f0e')
     plt.legend(loc='upper left')
     plt.title('Categorical Crossentropy')
     plt.grid(alpha=.3)
     plt.xlabel('Epochs')
     plt.ylabel('Percentage')
 
-    plt.figure(figsize=(15,5))
+    plt.figure(figsize=(15, 5))
     plt.plot(history['accuracy'], alpha=.3, color='#ff7f0e', linestyle='--')
-    plt.plot(history['val_accuracy'], label='Vanilla CNN', alpha=.8, color='#ff7f0e')
+    plt.plot(history['val_accuracy'], label='ConvNextBase', alpha=.8, color='#ff7f0e')
     plt.legend(loc='upper left')
     plt.title('Accuracy')
     plt.grid(alpha=.3)
@@ -137,3 +130,4 @@ with tf.device('/GPU:0'):
     plt.xlabel('True labels')
     plt.ylabel('Predicted labels')
     plt.show()
+

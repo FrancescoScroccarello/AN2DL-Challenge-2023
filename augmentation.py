@@ -18,7 +18,7 @@ for i in trange(images.shape[0]):
         unhealthy.append(images[i])
 
 preprocessing = tf.keras.Sequential([
-    keras_cv.layers.AutoContrast(value_range=(0,255))
+    keras_cv.layers.AutoContrast(value_range=(0, 255))
 ])
 
 len = len(images) - 2*len(unhealthy) + random.randint(-100,100)
