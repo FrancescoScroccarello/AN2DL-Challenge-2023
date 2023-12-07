@@ -1,5 +1,4 @@
 import os
-
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import keras_cv
 import numpy as np
@@ -28,12 +27,8 @@ with tf.device('/GPU:0'):
 
     labels = tfk.utils.to_categorical(labels, num_classes=2)
 
-    img_train_val, img_test, label_train_val, label_test = train_test_split(
-        images, labels, random_state=seed, test_size=.10, stratify=labels
-    )
-
     img_train, img_val, label_train, label_val = train_test_split(
-        img_train_val, label_train_val, random_state=seed, test_size=.20, stratify=label_train_val
+        images, labels, random_state=seed, test_size=.20, stratify=labels
     )
 
     input_shape = img_train.shape[1:]
@@ -113,21 +108,3 @@ with tf.device('/GPU:0'):
     plt.show()
 
     model.save('MyModel')
-
-
-    predictions = model.predict(img_test, verbose=0)
-    cm = confusion_matrix(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1))
-    accuracy = accuracy_score(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1))
-    precision = precision_score(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1), average='macro')
-    recall = recall_score(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1), average='macro')
-    f1 = f1_score(np.argmax(label_test, axis=-1), np.argmax(predictions, axis=-1), average='macro')
-    print('Accuracy:', accuracy.round(4))
-    print('Precision:', precision.round(4))
-    print('Recall:', recall.round(4))
-    print('F1:', f1.round(4))
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(cm.T, xticklabels=list(('unhealthy','healthy')), yticklabels=list(('unhealthy','healthy')), cmap='Blues', annot=True)
-    plt.xlabel('True labels')
-    plt.ylabel('Predicted labels')
-    plt.show()
-

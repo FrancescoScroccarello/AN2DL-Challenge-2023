@@ -1,5 +1,6 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import keras
 import random
 import tensorflow as tf
 from keras import layers as tfkl
@@ -18,7 +19,9 @@ for i in trange(images.shape[0]):
         unhealthy.append(images[i])
 
 preprocessing = tf.keras.Sequential([
-    keras_cv.layers.AutoContrast(value_range=(0, 255))
+    tfkl.RandomTranslation(0.3, 0.3, seed=42),
+    tfkl.RandomRotation(0.25, seed=42),
+    tfkl.RandomFlip(seed=42),
 ])
 
 len = len(images) - 2*len(unhealthy) + random.randint(-100,100)
@@ -40,4 +43,4 @@ labels = np.concatenate((labels,np.array(new_labels)),axis=0 )
 permutation = np.random.permutation(images.shape[0])
 new_images = images[permutation]
 new_labels = labels[permutation]
-np.savez("AugmentedSet/augmented_dataset",data=new_images,labels=new_labels)
+np.savez("Homework 1/AugmentedSet/augmented_dataset", data=new_images, labels=new_labels)

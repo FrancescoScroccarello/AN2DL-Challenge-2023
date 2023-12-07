@@ -28,4 +28,5 @@ for i in trange(images.shape[0]):
 
 clean_set = np.array(clean_set)
 clean_labels = np.array(clean_labels)
-np.savez("Dataset/clean_dataset.npz",data=clean_set,labels=clean_labels)
+print(clean_set.shape[0])
+np.savez("CleanDS/clean_dataset.npz", data=clean_set, labels=clean_labels)
