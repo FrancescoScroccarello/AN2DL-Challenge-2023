@@ -60,31 +60,26 @@ with tf.device('/GPU:0'):
     batch_size = 256
     epochs = 200
 
-    # time series classification
     # Build the neural network layer by layer
-    # Define the input layer with the specified shape
-    input_layer = tfkl.Input(shape=input_shape, name='input_layer')
+    input_layer = tfkl.Input(shape=input_shape, name='Input')
 
-    # Add a Bidirectional LSTM layer with 64 units
-    x = tfkl.Bidirectional(tfkl.LSTM(64, return_sequences=True, name='lstm'), name='bidirectional_lstm')(input_layer)
+    # Convolutional layer
+    conv_layer = tfkl.Conv1D(120,6,padding="same",strides=1,name="Conv")(input_layer)
+    # Pooling
+    pooling = tfkl.MaxPooling1D(3,padding="same")(conv_layer)
 
-    # Add a 1D Convolution layer with 128 filters and a kernel size of 3
-    x = tfkl.Conv1D(128, 3, padding='same', activation='relu', name='conv')(x)
+    # LSTM
+    bilstm = tfkl.Bidirectional(tfkl.LSTM(128, return_sequences=True))(pooling)
 
-    # Add a final Convolution layer to match the desired output shape
-    output_layer = tfkl.Conv1D(output_shape[1], 3, padding='same', name='output_layer')(x)
+    # Flattening
+    flattening = tfkl.Flatten()(bilstm)
 
-    # Calculate the size to crop from the output to match the output shape
-    crop_size = output_layer.shape[1] - output_shape[0]
+    # Prediction
+    output_layer = tfkl.Dense(output_shape[0], activation='linear', name='output_layer')(flattening)
+    # Connect input and output through the Model class
+    model = tfk.Model(inputs=input_layer, outputs=output_layer, name='model')
 
-    # Crop the output to the desired length
-    output_layer = tfkl.Cropping1D((0,crop_size), name='cropping')(output_layer)
-    output_layer = tfkl.Reshape((9,))(output_layer)
-
-    # Construct the model by connecting input and output layers
-    model = tf.keras.Model(inputs=input_layer, outputs=output_layer, name='CONV_LSTM_model')
-
-    # Compile the model with Mean Squared Error loss and Adam optimizer
+    # Compile the model
     model.compile(loss=tf.keras.losses.MeanSquaredError(), optimizer=tf.keras.optimizers.Adam())
 
     model.summary()
