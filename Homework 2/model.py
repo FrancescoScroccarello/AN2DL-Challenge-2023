@@ -27,71 +27,81 @@ tf.random.set_seed(seed)
 tf.compat.v1.set_random_seed(seed)
 
 import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 
 
 with tf.device('/GPU:0'):
-    training_data = np.load("Dataset/cut_data.npy")
+    data = np.load("Dataset/cut_data.npy")
     valid_periods = np.load("Dataset/valid_periods.npy")
     categories = np.load("Dataset/categories.npy")
 
-    training_data = training_data.reshape((training_data.shape[0],training_data.shape[1],1))
-    categories = np.array([ord(i)-65 for i in categories])
-
+    data = data.reshape((data.shape[0], data.shape[1], 1))
     # shuffle of ordered data
-    permutation = np.random.permutation(training_data.shape[0])
-    training_data = training_data[permutation]
+    permutation = np.random.permutation(data.shape[0])
+    data = data[permutation]
     categories = categories[permutation]
 
-    train_val_data, test_set, train_val_categories, test_categories = train_test_split(
-        training_data, categories, random_state=seed, test_size=.20, stratify=categories
+    '''
+    rawdata = []
+    for i in range(data.shape[0]):
+        if categories[i]=='A':
+            rawdata.append(data[i])
+    data = np.array(rawdata)
+    '''
+
+    # split data into training set and test set (validation set provided within fit function)
+    data, test_data = train_test_split(
+        data, random_state=seed, test_size=.10
     )
 
-    training_data = train_val_data[:,:-9]
-    val_data = train_val_data[:,-9:]
+    train_in = data[:, :-9] # input series
+    train_out = data[:, -9:] # last 9 samples to predict (literally the output to check)
 
-    test_in = test_set[:,:-9]
-    test_out = test_set[:,-9:]
+    test_in = test_data[:,:-9]
+    test_out = test_data[:,-9:]
 
-    input_shape = training_data.shape[1:]
-    output_shape = val_data.shape[1:]
+    input_shape = train_in.shape[1:]
+    output_shape = train_out.shape[1:]
     batch_size = 256
-    epochs = 200
+    epochs = 500
 
-    # Build the neural network layer by layer
     input_layer = tfkl.Input(shape=input_shape, name='Input')
 
-    # Convolutional layer
-    conv_layer = tfkl.Conv1D(120,6,padding="same",strides=1,name="Conv")(input_layer)
-    # Pooling
-    pooling = tfkl.MaxPooling1D(3,padding="same")(conv_layer)
+    # Encoder
+    encoder = tfkl.LSTM(64, return_sequences=True, return_state=True, name='encoder')(input_layer)
 
-    # LSTM
-    bilstm = tfkl.Bidirectional(tfkl.LSTM(128, return_sequences=True))(pooling)
+    # Decoder
+    decoder = tfkl.LSTM(64, return_sequences=True, return_state=False, name='decoder')(encoder)
 
-    # Flattening
-    flattening = tfkl.Flatten()(bilstm)
+    # Attention
+    attention = tfkl.Attention(name='attention')([encoder[0], decoder])
 
+    context = tfkl.Concatenate(name='concatenation')([decoder, attention])
+
+    flattening = tfkl.Flatten(name='flattening')(context)
+
+    dense = tfkl.Dense(256, activation='relu', name='dense1')(flattening)
+
+    dropout = tfkl.Dropout()
     # Prediction
-    output_layer = tfkl.Dense(output_shape[0], activation='linear', name='output_layer')(flattening)
+    output_layer = tfkl.Dense(output_shape[0], activation='linear', name='output_layer')(denseatt)
+
     # Connect input and output through the Model class
     model = tfk.Model(inputs=input_layer, outputs=output_layer, name='model')
 
     # Compile the model
-    model.compile(loss=tf.keras.losses.MeanSquaredError(), optimizer=tf.keras.optimizers.Adam())
+    model.compile(loss=tf.keras.losses.MeanSquaredError(), optimizer=tf.keras.optimizers.Adam(1e-3))
 
     model.summary()
 
     history = model.fit(
-        x=training_data,
-        y=val_data,
+        x=train_in,
+        y=train_out,
         batch_size=batch_size,
         epochs=epochs,
         validation_split=.1,
         callbacks=[
-            tfk.callbacks.EarlyStopping(monitor='val_loss', mode='min', patience=12, restore_best_weights=True),
+            tfk.callbacks.EarlyStopping(monitor='val_loss', mode='min', patience=15, restore_best_weights=True),
             tfk.callbacks.ReduceLROnPlateau(monitor='val_loss', mode='min', patience=10, factor=0.1, min_lr=1e-5)
         ]
     ).history
