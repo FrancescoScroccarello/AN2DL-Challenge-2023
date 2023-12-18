@@ -67,18 +67,24 @@ with tf.device('/GPU:0'):
 
     input_layer = tfkl.Input(shape=input_shape, name='Input')
 
+    # ARCHITECTURE 1
     # Encoder
-    encoder = tfkl.LSTM(64, return_sequences=True, return_state=True, name='encoder')(input_layer)
-
+    encoder1 = tfkl.LSTM(64, return_sequences=True, return_state=True, name='encoder1')(input_layer)
     # Decoder
-    decoder = tfkl.LSTM(64, return_sequences=True, return_state=False, name='decoder')(encoder)
-
+    decoder1 = tfkl.LSTM(64, return_sequences=True, return_state=False, name='decoder1')(encoder1)
     # Attention
-    attention = tfkl.Attention(name='attention')([encoder[0], decoder])
+    attention1 = tfkl.Attention(name='attention1')([encoder1[0], decoder1])
+    context1 = tfkl.Concatenate(name='context1')([decoder1, attention1])
 
-    context = tfkl.Concatenate(name='concatenation')([decoder, attention])
+    # ARCHITECTURE 2
+    encoder2 = tfkl.LSTM(128, return_sequences=True, return_state=True, name='encoder2')(input_layer)
+    decoder2 = tfkl.LSTM(128, return_sequences=True, return_state=False, name='decoder2')(encoder2)
+    attention2 = tfkl.Attention(name='attention2')([encoder2[0], decoder2])
+    context2 = tfkl.Concatenate(name='context2')([decoder2, attention2])
 
-    flattening = tfkl.Flatten(name='flattening')(context)
+    # Join threads
+    join = 0.5*tfkl.Add()([context1, context2])
+    flattening = tfkl.Flatten(name='flattening')(join)
     dropout = tfkl.Dropout(0.1)(flattening)
 
     dense = tfkl.Dense(256, activation='relu', name='dense1')(dropout)
@@ -91,7 +97,6 @@ with tf.device('/GPU:0'):
 
     # Compile the model
     model.compile(loss=tf.keras.losses.MeanSquaredError(), optimizer=tf.keras.optimizers.Adam(1e-3))
-
     model.summary()
 
     history = model.fit(
