@@ -74,7 +74,7 @@ with tf.device('/GPU:0'):
     decoder = tfkl.LSTM(64, return_sequences=True, return_state=False, name='decoder')(encoder)
 
     # Attention
-    attention = tfkl.Attention(name='attention')([decoder, encoder[0]])
+    attention = tfkl.Attention(name='attention')([encoder[0], decoder])
 
     context = tfkl.Concatenate(name='concatenation')([decoder, attention])
 
