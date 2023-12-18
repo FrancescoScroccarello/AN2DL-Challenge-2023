@@ -74,17 +74,17 @@ with tf.device('/GPU:0'):
     decoder = tfkl.LSTM(64, return_sequences=True, return_state=False, name='decoder')(encoder)
 
     # Attention
-    attention = tfkl.Attention(name='attention')([encoder[0], decoder])
+    attention = tfkl.Attention(name='attention')([decoder, encoder[0]])
 
     context = tfkl.Concatenate(name='concatenation')([decoder, attention])
 
     flattening = tfkl.Flatten(name='flattening')(context)
+    dropout = tfkl.Dropout(0.1)(flattening)
 
-    dense = tfkl.Dense(256, activation='relu', name='dense1')(flattening)
-
-    dropout = tfkl.Dropout()
+    dense = tfkl.Dense(256, activation='relu', name='dense1')(dropout)
+    dense2 = tfkl.Dense(64, activation='relu', name='dense2')(dense)
     # Prediction
-    output_layer = tfkl.Dense(output_shape[0], activation='linear', name='output_layer')(denseatt)
+    output_layer = tfkl.Dense(output_shape[0], activation='linear', name='output_layer')(dense2)
 
     # Connect input and output through the Model class
     model = tfk.Model(inputs=input_layer, outputs=output_layer, name='model')
