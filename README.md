@@ -4,7 +4,7 @@ This is the repo containing codes and reports for the challenges of the Artifici
 # Team members:
 [Martina Viganò](https://github.com/MartinaVigano)\
 [Alessandro Ricci](https://github.com/alessandro-ricci-16)\
-[Jacopo Taccucci] (https://github.com/darumaseye)
+[Jacopo Taccucci](https://github.com/darumaseye)
 
 # Challenge 1: Image Classification
 The goal of the challenge was to build a CNN to classify health status of plants given their image. Our team placed 43 out of 533 groups, with a final accuracy of 0.8570.
