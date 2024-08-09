@@ -2,8 +2,8 @@
 This is the repo containing codes and reports for the challenges of the Artificial Neural Networks and Deep Learning course aa 2023/2024.
 
 # Team members:
-Martina Viganò
-Alessandro Ricci
+Martina Viganò\
+Alessandro Ricci\
 Jacopo Taccucci
 
 # Challenge 1: Image Classification
