@@ -3,7 +3,7 @@ This is the repo containing codes and reports for the challenges of the Artifici
 
 # Team members:
 Martina Viganò\
-Alessandro Ricci\
+[Alessandro Ricci](https://github.com/alessandro-ricci-16)\
 Jacopo Taccucci
 
 # Challenge 1: Image Classification
