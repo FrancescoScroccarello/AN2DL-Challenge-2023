@@ -1,5 +1,5 @@
 # AN2DL-Challenge
-This is the repo containing codes and reports for the challenges of the Artificial Neural Networks and Deep Learning course aa 2023/2024.
+This is the repo containing codes and reports for the challenges of the Artificial Neural Networks and Deep Learning course, ay 2023/2024, team **GPT_generated_name**.
 
 # Team members:
 [Martina Viganò](https://github.com/MartinaVigano)\
